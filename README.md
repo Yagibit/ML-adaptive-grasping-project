@@ -1,162 +1,124 @@
 # Machine Learning Based Adaptive Grip Force Control for Robotic Grippers
 
-This project builds a supervised learning pipeline on top of an existing modular MuJoCo MJCF robotic arm and gripper design.
+## Project Structure
 
-The robot definition is reused directly from:
-- assets/main.xml
-- assets/models/*.xml
+adaptive-grip-force-ml/
+- assets/
+  - meshes/ (unchanged)
+  - models/ (unchanged)
+  - main.xml (edited as requested)
+- scripts/
+  - run_simulation.py
+  - generate_dataset.py
+  - train_model.py
+  - evaluate_model.py
+- data/
+  - grip_dataset.csv
+- models/
+  - trained_model.pkl
+- requirements.txt
+- README.md
 
-No robot rebuild is performed. The implementation focuses on gripper control, grasp trial simulation, force/contact data extraction, CSV dataset generation, and supervised model training.
+## Rules Implemented
 
-The control pipeline now includes:
-- flexible lower-arm motion (pre-grasp -> approach -> lift)
-- adaptive grip-force control using contact and normal-force feedback as tactile proxies
+- Robot loads from assets/main.xml
+- Robot modular structure is preserved
+- Simple cube object is in assets/main.xml
+- Controls are normalized in [0, 1]
+- Actuators in assets/main.xml use ctrlrange="0 1"
 
-## Project Goals
-
-1. Load existing robot from assets/main.xml.
-2. Control arm and gripper (gripper-focused).
-3. Execute grasping trials on cube/cylinder objects.
-4. Extract force/contact and motion features.
-5. Save dataset to data/raw/grip_dataset.csv.
-6. Train supervised models for:
-- grasp success prediction (classification)
-- optimal grip command prediction (regression)
-
-## Folder Structure
-
-- assets/ : existing MuJoCo MJCF and mesh files
-- simulation/ : simulation, object injection, control discovery, trial execution, feature extraction
-- data/raw/ : generated datasets
-- data/processed/ : optional processed feature sets
-- models/artifacts/ : trained model artifacts and metrics
-- scripts/ : CLI entry scripts
-
-## Key Implementation Modules
-
-- simulation/config.py : simulation and experiment configuration
-- simulation/scene_builder.py : builds per-trial XML scene by injecting trial object into assets/main.xml
-- simulation/robot_interface.py : discovers joint and actuator indices and provides control helpers
-- simulation/data_extraction.py : extracts contacts and contact-force summaries from MuJoCo data
-- simulation/trial_runner.py : runs one full grasp trial and returns structured trial record
-- models/training_pipeline.py : training and evaluation for classification and regression models
-
-## Environment Setup
-
-1. Create and activate a Python virtual environment.
-2. Install dependencies:
+## Setup
 
 python -m pip install -r requirements.txt
 
-## CLI Workflow
+## Run Simulation
 
-### 1) Inspect model controls and names
+python scripts/run_simulation.py
 
-python scripts/inspect_model.py
+## Generate Dataset
 
-### 2) Run one trial sanity check
+python scripts/generate_dataset.py --trials 300 --output data/grip_dataset.csv
 
-python scripts/run_single_trial.py --object-type box --grip-command 6.0
+Collected columns:
+- wrist_ctrl
+- hand_ctrl
+- contact_count
+- object_height
+- success
 
-### 3) Interactive viewer control
+Label rule:
+- success = 1 if object height increases
+- success = 0 otherwise
 
-python scripts/view_simulation.py --object-type box --grip-command 6.0
+## Train Model
 
-Viewer console commands:
-- open
-- close
-- grip X
-- arm
-- approach
-- lift
-- adapt on|off
-- stats
-- reset
-- quit
+python scripts/train_model.py --dataset data/grip_dataset.csv --output models/trained_model.pkl
 
-### 4) Generate dataset
+Model:
+- RandomForestClassifier
 
-python scripts/generate_dataset.py --num-scenarios 40 --forces-per-scenario 10 --output data/raw/grip_dataset.csv --plot
+Features:
+- wrist_ctrl
+- hand_ctrl
+- contact_count
 
-### 5) Automatic grasp pose calibration sweep
+Target:
+- success
 
-python scripts/calibrate_grasp_pose.py --max-combos 120 --repeats 2 --write-config
+## Evaluate Model
 
-Calibration behavior:
-- sweeps arm_grasp_targets offsets
-- sweeps object spawn offsets around nominal pose
-- maximizes combined objective: lift success + object-gripper contact + height gain, penalizing slip
-- writes tuned defaults back into simulation/config.py
+python scripts/evaluate_model.py --dataset data/grip_dataset.csv --model models/trained_model.pkl --out-dir models
 
-### 6) Tactile-feedback plotting (standalone)
+Printed metrics:
+- Accuracy
+- Precision
+- Recall
+- F1-score
 
-python scripts/plot_tactile_feedback.py --dataset data/raw/grip_dataset.csv --out-dir data/processed/plots
+Saved plots:
+- confusion_matrix.png
+- wrist_ctrl_vs_success.png
+- contact_count_vs_success.png
 
-Generated plots:
-- contact_force_over_trials.png
-- success_vs_adaptive_final_grip_command.png
-- slip_event_distribution.png
+## Hybrid Imitation + RL Pipeline
 
-Dataset columns include:
-- Features:
-  - grip_command
-  - adaptive_final_grip_command
-  - gripper_joint_mean
-  - object size/mass
-  - object z-height features (initial/max/final/delta)
-  - contact_count_total_peak
-  - contact_count_obj_gripper_peak
-  - mean_contact_normal_force
-  - tactile_contact_mean
-  - tactile_force_mean
-  - slip_event_count
-- Labels:
-  - success (0/1)
-  - optimal_grip_command (minimum successful adaptive command per scenario)
+New research-oriented modules are provided:
+- env/
+  - config.py
+  - grasp_env.py
+  - expert_policy.py
+- data/
+  - collect_expert_data.py
+  - trajectory_dataset.py
+- models/
+  - policy_network.py
+- train_supervised/
+  - train_bc.py
+- train_rl/
+  - train_rl.py
+- scripts/
+  - evaluate_grasp_learning.py
 
-### 7) Train supervised models
+### Stage 1: Expert Data Generation
 
-python scripts/train_models.py --dataset data/raw/grip_dataset.csv --artifacts-dir models/artifacts
+python data/collect_expert_data.py --episodes 120 --out-npz data/datasets/expert_trajectories.npz --save-h5
 
-Saved artifacts:
-- models/artifacts/logistic_success.joblib
-- models/artifacts/random_forest_success.joblib
-- models/artifacts/random_forest_optimal_force.joblib
-- models/artifacts/torch_mlp_optimal_force.pt
-- models/artifacts/torch_mlp_scaler.joblib
-- models/artifacts/metrics.json
+Outputs:
+- states s_t
+- actions a_t
+- next_states s_{t+1}
+- rewards, dones
 
-## Model Stack
+### Stage 2: Supervised Behavior Cloning
 
-Classification (grasp success):
-- Baseline: Logistic Regression
-- Advanced: Random Forest Classifier
+python train_supervised/train_bc.py --dataset data/datasets/expert_trajectories.npz --out models/checkpoints/bc_policy.pt
 
-Regression (optimal grip command):
-- Advanced: Random Forest Regressor
-- Neural model: PyTorch MLP Regressor
+### Stage 3: RL Refinement (PPO/SAC)
 
-## Success Label Logic
+python train_rl/train_rl.py --algo ppo --timesteps 200000 --bc-path models/checkpoints/bc_policy.pt --out models/rl/rl_policy.zip
 
-A trial is labeled success (1) when either condition is met:
-- Lift criterion: object z increase exceeds threshold
-- Stable grasp criterion: sustained gripper-object contacts with limited displacement during hold phase
+### Evaluation (Success Rate)
 
-Otherwise the label is failure (0).
-
-## Adaptive Grip Feedback Logic
-
-During close and hold phases:
-- If object-gripper contact count is below target, grip command is increased.
-- If normal force is below target, grip command is increased.
-- If normal force is too high, grip command is reduced.
-- If slip-like behavior is detected, grip command is increased.
-
-All updates are clipped to configured actuator command bounds.
-
-## Notes
-
-- Existing robot MJCF structure is preserved.
-- Grasp objects are generated dynamically in Python for dataset control.
-- Gripper control is the primary control signal.
-- Arm movement is intentionally simple and only supports a repeatable pre-grasp setup.
+python scripts/evaluate_grasp_learning.py --mode expert
+python scripts/evaluate_grasp_learning.py --mode bc --bc-path models/checkpoints/bc_policy.pt
+python scripts/evaluate_grasp_learning.py --mode rl --algo ppo --rl-path models/rl/rl_policy.zip

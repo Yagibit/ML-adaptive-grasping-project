@@ -1,20 +1,25 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='ascii'?>
 <mujoco model="Robot Arm">
 
-
+    
     <default>
         <default class="joint">
-            <joint damping="1" />
+            <joint damping="2" />
         </default>
 
+        <default class="geom">
+            <geom friction="1 0.005 0.0001" solref="0.02 1" solimp="0.9 0.95 0.001" />
+        </default>
     </default>
 
+    
     <visual>
         <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0" />
         <rgba haze="0.15 0.25 0.35 1" />
         <global azimuth="-130" elevation="-60" />
     </visual>
 
+    
     <asset>
         <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="1 1 1" width="512" height="3072" />
         <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300" />
@@ -31,14 +36,19 @@
         <model name="Gripper" file="models/Gripper.xml" />
     </asset>
 
+    
     <worldbody>
-        <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
-        <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" />
-    </worldbody>
 
-    <worldbody>
+        <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
+
+        
+        <geom name="floor" type="plane" size="0 0 0.05" material="groundplane" friction="1 0.01 0.0001" />
+
+        
         <body pos="0 0 0.080">
+
             <attach model="Base" body="Base" prefix="base_" />
+
             <body pos="0 0 0.065">
                 <attach model="Hip" body="Hip" prefix="hip_" />
                 <joint class="joint" name="joint_hip" />
@@ -47,7 +57,7 @@
                     <attach model="Hindarm" body="Hindarm" prefix="hindarm_" />
                     <joint class="joint" name="joint_hindarm" />
 
-                    <body pos="0.22112 0 0" euler="0 0 0">
+                    <body pos="0.22112 0 0">
                         <attach model="Forearm" body="Forearm" prefix="forearm_" />
                         <joint class="joint" name="joint_forearm" />
 
@@ -55,34 +65,39 @@
                             <attach model="Wrist" body="Wrist" prefix="wrist_" />
                             <joint class="joint" name="joint_wrist" />
 
-                                <body pos="0 0 0.095" euler="-90 0 -90">
-                                    <attach model="Hand" body="Hand" prefix="hand_" />
-                                    <joint class="joint" name="joint_hand" />
+                            <body pos="0 0 0.095" euler="-90 0 -90">
+                                <attach model="Hand" body="Hand" prefix="hand_" />
+                                <joint class="joint" name="joint_hand" />
 
-                                    <body pos="0.041 0 0" euler="0 0 0">
-                                        <attach model="Gripper" body="Gripper" prefix="gripper_" />
-
-                                    </body>
+                                
+                                <body pos="0.041 0 0">
+                                    <attach model="Gripper" body="Gripper" prefix="gripper_" />
                                 </body>
-                            
-                        </body>
 
-                        
+                            </body>
+                        </body>
                     </body>
                 </body>
             </body>
         </body>
-        
-        
-        
-    <body name="trial_object" pos="-0.040000 0.000000 0.020000"><joint name="trial_object_freejoint" type="free" /><geom name="trial_object_geom" type="box" mass="0.080000" size="0.006000 0.006000 0.006000" rgba="0.1 0.8 0.2 1" friction="0.9 0.05 0.02" solimp="0.95 0.995 0.001" solref="0.002 1" /></body></worldbody>
 
+        
+        <body name="cube" pos="0.22 0 0.08">
+            <joint type="free" />
+            <geom type="box" size="0.03 0.03 0.03" rgba="1 0 0 1" mass="0.08" contype="1" conaffinity="1" friction="2 0.05 0.001" solref="0.01 1" solimp="0.95 0.99 0.001" />
+        </body>
 
+    </worldbody>
+
+    
     <actuator>
-        <position joint="joint_hip" name="hip_ctrl" kp="20" kv="0.0" />
-        <position joint="joint_hindarm" name="hindarm_ctrl" kp="70" kv="1" />
-        <position joint="joint_forearm" name="forearm_ctrl" kp="50" kv="0" />
-        <position joint="joint_wrist" name="wrist_ctrl" kp="30" kv="0.0" />
-        <position joint="joint_hand" name="hand_ctrl" kp="30" kv="0.0" />
-    </actuator>
-<option gravity="0 0 -9.81" /></mujoco>
+        <position joint="joint_hip" name="hip_ctrl" kp="20" ctrlrange="0 1" />
+        <position joint="joint_hindarm" name="hindarm_ctrl" kp="70" ctrlrange="0 1" />
+        <position joint="joint_forearm" name="forearm_ctrl" kp="50" ctrlrange="0 1" />
+        <position joint="joint_wrist" name="wrist_ctrl" kp="30" ctrlrange="0 1" />
+        <position joint="joint_hand" name="hand_ctrl" kp="30" ctrlrange="-1 1" />
+
+        
+        </actuator>
+
+</mujoco>
