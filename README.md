@@ -29,13 +29,12 @@ adaptive-grip-force-ml/
 └── README.md # Project documentation
 
 
----
 
 ## 🛠️ Installation
 
 Ensure you have Python 3.8 or higher installed. Clone the repository and install dependencies:
 
-```bash
+
 # Clone the repository
 git clone https://github.com/your-username/adaptive-grip-force-ml.git
 cd adaptive-grip-force-ml
@@ -78,10 +77,11 @@ The system evaluates the learned policy based on:
 Grasp Success: Whether the robot successfully lifts the cube
 Stability: Whether the grip remains firm during lifting
 Reproducibility: Consistency across multiple trials
+
 ⚠️ Notes & Limitations
 Behavior Cloning: Performance depends on the quality of the scripted expert
 No Online Adaptation: This project focuses strictly on supervised learning (no reinforcement learning)
 Simplified Physics: Contact dynamics are tuned for stability in simulation
 Visual Target: The system aims to replicate the configuration shown in robot_grip.jpg
 
----
+
