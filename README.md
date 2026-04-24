@@ -45,8 +45,8 @@ adaptive-grip-force-ml/
 ### Setup
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/adaptive-grip-force-ml.git
-cd adaptive-grip-force-ml
+git clone https://github.com/Yagibit/ML-adaptive-grasping-project.git
+cd ROBOOT
 
 # Install required packages
 pip install -r requirements.txt
