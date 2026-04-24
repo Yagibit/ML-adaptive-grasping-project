@@ -1,4 +1,4 @@
-# Supervised MuJoCo Grasping Demo
+# Supervised MuJoCo Grasping
 
 This repository demonstrates a **Supervised Learning (Behavior Cloning)** approach for robotic grasping using a modular MuJoCo-based environment. Rather than relying on Reinforcement Learning, the system learns a control policy directly from expert demonstrations.
 
