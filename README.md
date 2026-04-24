@@ -1,124 +1,108 @@
-# Machine Learning Based Adaptive Grip Force Control for Robotic Grippers
+# ML-Adaptive-Grasping
 
-## Project Structure
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![MuJoCo](https://img.shields.io/badge/Physics-MuJoCo-red.svg)](https://mujoco.org/)
 
+This repository implements a **Supervised Learning (Behavior Cloning)** pipeline for robotic grasping. Utilizing a modular MuJoCo-based environment, the system learns to map environment states to actuator commands by mimicking scripted expert trajectories.
+
+---
+
+## 📌 Overview
+
+The project provides an end-to-end workflow to approximate robotic control without the computational overhead of Reinforcement Learning. 
+
+### Key Features
+* **Expert Mimicry:** Uses a scripted controller to generate high-fidelity grasping data.
+* **Behavior Cloning (BC):** Trains a Deep Neural Network to map state-action pairs $(S \to A)$.
+* **MuJoCo Integration:** Leverages high-speed physics simulation for data collection and testing.
+* **Modular Architecture:** Separate modules for environment physics, data ingestion, and model training.
+
+---
+
+## 📂 Project Structure
+
+```text
 adaptive-grip-force-ml/
-- assets/
-  - meshes/ (unchanged)
-  - models/ (unchanged)
-  - main.xml (edited as requested)
-- scripts/
-  - run_simulation.py
-  - generate_dataset.py
-  - train_model.py
-  - evaluate_model.py
-- data/
-  - grip_dataset.csv
-- models/
-  - trained_model.pkl
-- requirements.txt
-- README.md
+├── assets/             # MJCF models (.xml), meshes, and reference images
+├── env/                # MuJoCo environment wrappers and expert policy logic
+├── data/               # Data collection scripts and trajectory storage
+├── models/             # Saved PyTorch/Pickle model checkpoints
+├── scripts/            # Simulation entry points and utility tools
+├── train_supervised/   # Core Behavior Cloning training logic
+├── requirements.txt    # Dependency list
+└── README.md           # Documentation
+```
 
-## Rules Implemented
+---
 
-- Robot loads from assets/main.xml
-- Robot modular structure is preserved
-- Simple cube object is in assets/main.xml
-- Controls are normalized in [0, 1]
-- Actuators in assets/main.xml use ctrlrange="0 1"
+## 🛠️ Installation
 
-## Setup
+### Prerequisites
+* Python 3.8 or higher
+* MuJoCo physics engine
 
-python -m pip install -r requirements.txt
+### Setup
+```bash
+# Clone the repository
+git clone https://github.com/Yagibit/ML-adaptive-grasping-project.git
+cd ROBOOT
 
-## Run Simulation
+# Install required packages
+pip install -r requirements.txt
+```
 
+---
+
+## 🚀 Execution Workflow
+
+### 1. Visualize the Environment
+Before training, verify the simulation and expert motion in the MuJoCo viewer:
+```bash
 python scripts/run_simulation.py
+```
 
-## Generate Dataset
+### 2. Data Collection
+Generate the expert trajectory dataset. This records joint angles, object coordinates, and expert actuator commands:
+```bash
+python data/collect_expert_data.py \
+    --episodes 120 \
+    --out-npz data/datasets/expert_trajectories.npz \
+    --save-h5
+```
 
-python scripts/generate_dataset.py --trials 300 --output data/grip_dataset.csv
+### 3. Policy Training
+Train the Behavior Cloning model. This script optimizes a network to predict the expert's next move based on current state observations:
+```bash
+python train_supervised/train_bc.py \
+    --dataset data/datasets/expert_trajectories.npz \
+    --out models/checkpoints/bc_policy.pt
+```
 
-Collected columns:
-- wrist_ctrl
-- hand_ctrl
-- contact_count
-- object_height
-- success
+### 4. Baseline Evaluation (Optional)
+A legacy classifier is included for performance benchmarking:
+```bash
+python scripts/train_model.py \
+    --dataset data/grip_dataset.csv \
+    --output models/trained_model.pkl
+```
 
-Label rule:
-- success = 1 if object height increases
-- success = 0 otherwise
+---
 
-## Train Model
+## 📊 Evaluation Metrics
 
-python scripts/train_model.py --dataset data/grip_dataset.csv --output models/trained_model.pkl
+The performance of the learned policy is quantified by:
 
-Model:
-- RandomForestClassifier
+| Metric | Description |
+| :--- | :--- |
+| **Grasp Success Rate** | Percentage of trials where the cube is successfully lifted. |
+| **Stability** | Maintenance of grip force during the duration of the lift. |
+| **Reproducibility** | Variance of success across different initial object placements. |
 
-Features:
-- wrist_ctrl
-- hand_ctrl
-- contact_count
+---
 
-Target:
-- success
+## ⚠️ Notes & Limitations
 
-## Evaluate Model
-
-python scripts/evaluate_model.py --dataset data/grip_dataset.csv --model models/trained_model.pkl --out-dir models
-
-Printed metrics:
-- Accuracy
-- Precision
-- Recall
-- F1-score
-
-Saved plots:
-- confusion_matrix.png
-- wrist_ctrl_vs_success.png
-- contact_count_vs_success.png
-
-## Hybrid Imitation + RL Pipeline
-
-New research-oriented modules are provided:
-- env/
-  - config.py
-  - grasp_env.py
-  - expert_policy.py
-- data/
-  - collect_expert_data.py
-  - trajectory_dataset.py
-- models/
-  - policy_network.py
-- train_supervised/
-  - train_bc.py
-- train_rl/
-  - train_rl.py
-- scripts/
-  - evaluate_grasp_learning.py
-
-### Stage 1: Expert Data Generation
-
-python data/collect_expert_data.py --episodes 120 --out-npz data/datasets/expert_trajectories.npz --save-h5
-
-Outputs:
-- states s_t
-- actions a_t
-- next_states s_{t+1}
-- rewards, dones
-
-### Stage 2: Supervised Behavior Cloning
-
-python train_supervised/train_bc.py --dataset data/datasets/expert_trajectories.npz --out models/checkpoints/bc_policy.pt
-
-### Stage 3: RL Refinement (PPO/SAC)
-
-python train_rl/train_rl.py --algo ppo --timesteps 200000 --bc-path models/checkpoints/bc_policy.pt --out models/rl/rl_policy.zip
-
-### Evaluation (Success Rate)
-
-python scripts/evaluate_grasp_learning.py --mode expert
-python scripts/evaluate_grasp_learning.py --mode bc --bc-path models/checkpoints/bc_policy.pt
-python scripts/evaluate_grasp_learning.py --mode rl --algo ppo --rl-path models/rl/rl_policy.zip
+* **Expert Dependence:** The model's upper-bound performance is strictly limited by the quality of the scripted expert.
+* **Offline Learning:** No online adaptation is performed; the policy does not learn from its own mistakes (standard BC limitation).
+* **Simulation vs. Reality:** Physics are tuned for stability; "Sim-to-Real" transfer may require additional domain randomization.

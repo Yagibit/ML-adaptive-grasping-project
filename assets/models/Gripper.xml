@@ -1,55 +1,34 @@
 <mujoco>
-    <compiler meshdir="../meshes/Gripper" />
-
     <default>
-        <mesh scale="0.001 0.001 0.001" />
+        <default class="geom">
+            <geom friction="1 0.5 0.5" contype="1" conaffinity="1" />
+        </default>
+        <default class="joint">
+            <joint damping="2" />
+        </default>
     </default>
 
-    <asset>
-        <material name="blue" rgba="0.0 0.3 0.7 1" />
-        <material name="black" rgba="0.2 0.2 0.2 1" />
-
-        <mesh name="servo_gear" file="gears/servo/Servo_Gear_B.STL" />
-        <mesh name="gripper_left" file="grippers/Gripper Left B.STL" />
-        <mesh name="bottom_plate" file="plates/Bottom Plate C.STL" />
-        <mesh name="top_plate" file="plates/Top_Plate_C.STL" />
-    </asset>
-
     <worldbody>
-        <body pos="0.024 0 -0.0085" euler="0 0 180" name="Gripper">
-            <body name="servo_body" pos="0 0.014 0.009" euler="0 0 -45">
-                <joint name="servo_gear" type="hinge" axis="0 0 1" damping="0.06" range="-1 1" />
-                <geom type="mesh" mesh="servo_gear" material="blue" mass="0.08" contype="0" conaffinity="0" />
+        <body name="Gripper" pos="0 0 0">
+            <!-- Rigid palm block attached to the wrist chain. -->
+            <geom type="box" pos="0 0 0" size="0.01 0.01 0.01" rgba="0.15 0.15 0.15 1" contype="0" conaffinity="0" />
+
+            <body name="left_finger" pos="0 -0.02 0">
+                <!-- Left jaw: single translational DOF along local +Y. -->
+                <joint name="left_slide" type="slide" axis="0 1 0" range="-0.02 0.0" />
+                <geom type="box" size="0.005 0.02 0.02" pos="0 0 0" rgba="0.2 0.2 0.2 1" />
             </body>
 
-            <body name="left_finger" pos="-0.040 -0.035 0.016" euler="0 0 180">
-                <joint name="left_finger_hinge" type="hinge" axis="0 0 1" range="-0.7 0.2" damping="0.35" />
-                <geom type="mesh" mesh="gripper_left" material="black" pos="-0.01002 -0.01299 -0.009" euler="90 0 0" mass="0.05" contype="0" conaffinity="0" />
-                <geom name="left_tip" type="box" pos="-0.028 -0.006 -0.006" size="0.010 0.004 0.012" mass="0.00" contype="1" conaffinity="1" friction="2.2 0.02 0.001" solref="0.003 1" solimp="0.98 0.999 0.0005" />
-            </body>
-
-            <body name="right_finger" pos="-0.040 0.035 0.016" euler="0 0 180">
-                <joint name="right_finger_hinge" type="hinge" axis="0 0 -1" range="-0.7 0.2" damping="0.35" />
-                <geom type="mesh" mesh="gripper_left" material="black" pos="-0.01002 0.01299 0.009" euler="-90 0 0" mass="0.05" contype="0" conaffinity="0" />
-                <geom name="right_tip" type="box" pos="-0.028 0.006 0.006" size="0.010 0.004 0.012" mass="0.00" contype="1" conaffinity="1" friction="2.2 0.02 0.001" solref="0.003 1" solimp="0.98 0.999 0.0005" />
-            </body>
-
-            <body pos="0 0 0.0055">
-                <geom type="mesh" mesh="bottom_plate" pos="-0.025 -0.030 0" euler="180 -90 -90" material="black" mass="0.04" contype="0" conaffinity="0" />
-            </body>
-
-            <body pos="0 0 0.0125">
-                <geom type="mesh" mesh="top_plate" pos="-0.025 0.030 0" euler="0 -90 -90" material="black" mass="0.04" contype="0" conaffinity="0" />
+            <body name="right_finger" pos="0 0.02 0">
+                <!-- Right jaw: mirrored slide axis for parallel closing motion. -->
+                <joint name="right_slide" type="slide" axis="0 -1 0" range="-0.02 0.0" />
+                <geom type="box" size="0.005 0.02 0.02" pos="0 0 0" rgba="0.2 0.2 0.2 1" />
             </body>
         </body>
     </worldbody>
 
-    <equality>
-        <joint joint1="left_finger_hinge" joint2="servo_gear" polycoef="0 -0.55 0 0 0" />
-        <joint joint1="right_finger_hinge" joint2="servo_gear" polycoef="0 -0.55 0 0 0" />
-    </equality>
-
     <actuator>
-        <position joint="servo_gear" name="ctrl" kp="220" ctrlrange="0 1" />
+        <position joint="left_slide" name="left_slide_ctrl" kp="100" ctrlrange="-0.02 0.0" />
+        <position joint="right_slide" name="right_slide_ctrl" kp="100" ctrlrange="-0.02 0.0" />
     </actuator>
 </mujoco>

@@ -20,6 +20,8 @@
         <global azimuth="-130" elevation="-60" />
     </visual>
 
+    <option gravity="0 0 -9.81" />
+
     <!-- ASSETS -->
     <asset>
         <texture type="skybox" builtin="gradient"
@@ -97,15 +99,15 @@
         </body>
 
         <!-- OBJECT (FIXED: stable physics + visibility) -->
-        <body name="cube" pos="0.22 0 0.08">
+        <body name="cube" pos="0.22 0 0.05">
             <joint type="free"/>
             <geom type="box"
                   size="0.03 0.03 0.03"
                   rgba="1 0 0 1"
-                  mass="0.3"
+                  mass="0.2"
                   contype="1"
                   conaffinity="1"
-                  friction="2 0.005 0.0001"
+                  friction="1 0.5 0.5"
                   solref="0.01 1"
                   solimp="0.95 0.99 0.001"/>
         </body>
